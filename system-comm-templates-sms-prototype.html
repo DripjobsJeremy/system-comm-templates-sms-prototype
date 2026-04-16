@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Communication Templates — SMS Prototype (BR-1–BR-5)</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background: #ebebeb;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      color: #333;
+      margin: 0;
+    }
+
+    /* ── Demo bar ─────────────────────────────────────────── */
+    .demo-bar {
+      background: #1e1b4b;
+      color: #c7d2fe;
+      padding: 9px 24px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .demo-bar strong { color: #fff; margin-right: 2px; }
+    .demo-bar .demo-divider { opacity: 0.3; }
+    .demo-bar .demo-scope { opacity: 0.65; font-size: 11px; }
+    .demo-btn {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .demo-btn:hover { background: rgba(255,255,255,0.22); }
+    .demo-btn.reset { margin-left: auto; }
+
+    /* ── Page wrapper ─────────────────────────────────────── */
+    .page-wrapper {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    /* ── Settings card ────────────────────────────────────── */
+    .settings-card {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .settings-header {
+      padding: 11px 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .settings-body { padding: 22px 20px 8px; }
+
+    /* ── Field rows ───────────────────────────────────────── */
+    .field-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .field-label {
+      width: 148px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #374151;
+      flex-shrink: 0;
+    }
+    .field-control { flex: 1; }
+
+    /* ── Editor ───────────────────────────────────────────── */
+    .editor-wrapper {
+      position: relative;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #fff;
+    }
+    .editor-wrapper:focus-within {
+      border-color: #7C3AED;
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+    }
+
+    /* Shared metrics — MUST match exactly so overlay aligns */
+    .editor-textarea,
+    .editor-display {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13.5px;
+      line-height: 1.65;
+      padding: 10px 14px;
+      letter-spacing: 0;
+      tab-size: 4;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .editor-textarea {
+      display: block;
+      width: 100%;
+      height: 290px;
+      position: relative;
+      z-index: 2;
+      color: transparent;
+      caret-color: #374151;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+    }
+    /* Hide native scrollbar — we sync it to the display */
+    .editor-textarea::-webkit-scrollbar { width: 6px; }
+    .editor-textarea::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+    .editor-display {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1;
+      pointer-events: none;
+      overflow: auto;
+      color: #374151;
+      /* hide scrollbar on overlay */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .editor-display::-webkit-scrollbar { display: none; }
+
+    /* ── Inline keyword warning styles ───────────────────── */
+    .kw-invalid {
+      border-radius: 2px;
+      background: rgba(251,191,36,0.2);
+      text-decoration: underline;
+      text-decoration-color: #F59E0B;
+      text-decoration-style: wavy;
+      text-underline-offset: 2px;
+      cursor: help;
+    }
+    .kw-adjacent {
+      border-radius: 2px;
+      background: rgba(239,68,68,0.14);
+      text-decoration: underline;
+      text-decoration-color: #EF4444;
+      text-decoration-style: wavy;
+      text-underline-offset: 2px;
+      cursor: help;
+    }
+
+    /* ── Counter row (BR-3) ───────────────────────────────── */
+    .counter-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 7px;
+      margin-bottom: 2px;
+    }
+    .seg-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 2px 9px;
+      font-size: 11.5px;
+      color: #6b7280;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .seg-pill.warn-seg {
+      background: #fffbeb;
+      border-color: #fcd34d;
+      color: #92400e;
+    }
+    .seg-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .seg-dot.green  { background: #10b981; }
+    .seg-dot.amber  { background: #F59E0B; }
+    .seg-dot.red    { background: #EF4444; }
+
+    .unicode-badge {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: #856404;
+    }
+    .unicode-badge.visible { display: inline-flex; }
+
+    /* ── Validation warnings (BR-4, BR-5) ────────────────── */
+    .val-warnings { margin-top: 6px; }
+    .val-warn-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      line-height: 1.45;
+    }
+    .val-warn-item .wi { flex-shrink: 0; font-size: 13px; margin-top: 1px; }
+    .val-warn-item.vw-invalid {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      color: #92400e;
+    }
+    .val-warn-item.vw-adjacent {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    /* ── Keywords panel ───────────────────────────────────── */
+    .keywords-panel {
+      background: #e6f6f6;
+      border: 1px solid #a7d4d4;
+      border-radius: 4px;
+      padding: 11px 15px;
+      font-size: 13px;
+      margin-top: 14px;
+      line-height: 1.85;
+    }
+    .keywords-panel strong { color: #374151; }
+    .kw-group {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .kw-group:last-child { border-bottom: none; padding-bottom: 0; }
+    .kw-group:first-child { padding-top: 0; }
+    .kw-group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      width: 130px;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+    .kw-group-tokens { display: flex; flex-wrap: wrap; gap: 4px; }
+    .kw { color: #5b21b6; font-weight: 500; }
+    .kw.kw-new {
+      background: rgba(124,58,237,0.07);
+      border: 1px solid rgba(124,58,237,0.22);
+      border-radius: 3px;
+      padding: 0 3px;
+    }
+    .kw-new-badge {
+      display: inline-block;
+      background: #7C3AED;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 0 5px;
+      border-radius: 8px;
+      vertical-align: middle;
+      margin-left: 1px;
+      line-height: 14px;
+      letter-spacing: 0.3px;
+      position: relative;
+      top: -1px;
+    }
+
+    /* ── Keyword resolution note ──────────────────────────── */
+    .kw-note {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 10px;
+    }
+
+    /* ── Restore Default ──────────────────────────────────── */
+    .restore-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    .btn-restore {
+      background: #fff;
+      border: 1px solid #d1d5db;
+      color: #374151;
+      padding: 5px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-restore:hover { background: #f9fafb; }
+
+    /* ── PDF Options ──────────────────────────────────────── */
+    .pdf-row {
+      display: flex;
+      align-items: flex-start;
+      padding: 14px 0 10px;
+      margin-top: 4px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .pdf-label {
+      width: 148px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #374151;
+      flex-shrink: 0;
+      padding-top: 1px;
+    }
+    .pdf-link {
+      color: #5b21b6;
+      text-decoration: none;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .pdf-link:hover { text-decoration: underline; }
+    .pdf-sub {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 3px;
+    }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    .settings-footer {
+      padding: 13px 20px;
+      border-top: 1px solid #e5e7eb;
+      background: #f9fafb;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-save {
+      background: #7C3AED;
+      color: #fff;
+      border: none;
+      padding: 8px 22px;
+      border-radius: 5px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-save:hover { background: #6d28d9; }
+    .btn-cancel {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      padding: 8px 18px;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-cancel:hover { background: #f9fafb; }
+
+    /* ── Save toast ───────────────────────────────────────── */
+    .save-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #065f46;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .save-toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── Legend tooltip ───────────────────────────────────── */
+    .proto-legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding: 8px 12px;
+      background: #fff;
+      border: 1px dashed #d1d5db;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: #6b7280;
+      align-items: center;
+    }
+    .proto-legend strong { color: #374151; }
+    .legend-swatch {
+      display: inline-block;
+      width: 30px;
+      height: 12px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 4px;
+      position: relative;
+      top: -1px;
+    }
+    .legend-swatch.s-invalid {
+      background: rgba(251,191,36,0.2);
+      border-bottom: 2px solid #F59E0B;
+    }
+    .legend-swatch.s-adjacent {
+      background: rgba(239,68,68,0.14);
+      border-bottom: 2px solid #EF4444;
+    }
+    .legend-swatch.s-new {
+      background: rgba(124,58,237,0.07);
+      border: 1px solid rgba(124,58,237,0.22);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Demo bar ──────────────────────────────────────────────── -->
+<div class="demo-bar">
+  <strong>Prototype</strong>
+  <span class="demo-scope">System Communication Templates · Appointment Scheduled SMS · BR-1 – BR-5</span>
+  <span class="demo-divider">|</span>
+  <button class="demo-btn" onclick="demoInsert('{bad-keyword}')">+ Unrecognized keyword (BR-4)</button>
+  <button class="demo-btn" onclick="demoInsert('{first-name}{last-name}')">+ Adjacent tokens (BR-5)</button>
+  <button class="demo-btn" onclick="demoInsert('😊 ')">+ Emoji → Unicode mode (BR-3)</button>
+  <button class="demo-btn reset" onclick="resetContent()">↺ Reset content</button>
+</div>
+
+<div class="page-wrapper">
+
+  <!-- ── Settings card ──────────────────────────────────────── -->
+  <div class="settings-card">
+
+    <div class="settings-header">System Communication Templates</div>
+
+    <div class="settings-body">
+
+      <!-- Select to Edit -->
+      <div class="field-row">
+        <div class="field-label">Select to Edit</div>
+        <div class="field-control">
+          <select class="form-control" style="font-size:13px;">
+            <option selected>Appointment Scheduled SMS</option>
+            <option>Appointment Scheduled Email</option>
+            <option>Appointment Re-Scheduled SMS</option>
+            <option>Appointment Re-Scheduled Email</option>
+            <option>On Site Estimate Scheduled SMS</option>
+            <option>On Site Estimate Scheduled Email</option>
+            <option>Job Scheduled SMS</option>
+            <option>Job Scheduled Email</option>
+            <option>Job Re-Scheduled SMS</option>
+            <option>Job Re-Scheduled Email</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div class="editor-wrapper" id="editorWrapper">
+        <div class="editor-display" id="editorDisplay" aria-hidden="true"></div>
+        <textarea
+          class="editor-textarea"
+          id="editorTextarea"
+          spellcheck="false"
+          aria-label="Template content"
+        ></textarea>
+      </div>
+
+      <!-- BR-3: Character / segment counter -->
+      <div class="counter-row">
+        <span class="seg-pill" id="segPill">
+          <span class="seg-dot green" id="segDot"></span>
+          <span id="counterText">0 / 500 characters · 1 segment (estimated)</span>
+        </span>
+        <span class="unicode-badge" id="unicodeBadge">
+          ⚡ Unicode detected — 70-char segments
+        </span>
+      </div>
+
+      <!-- Inline validation warnings (BR-4, BR-5) -->
+      <div class="val-warnings" id="valWarnings"></div>
+
+      <!-- BR-1: Keywords panel — grouped by category -->
+      <div class="keywords-panel">
+
+        <div class="kw-group">
+          <span class="kw-group-label">Customer</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{first-name}</span>
+            <span class="kw">{last-name}</span>
+          </div>
+        </div>
+
+        <div class="kw-group">
+          <span class="kw-group-label">Appointment</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{event-type}</span>
+            <span class="kw">{appointment-date}</span>
+            <span class="kw">{appointment-start-time}</span>
+            <span class="kw">{appointment-end-time}</span>
+            <span class="kw">{appointment-time}</span>
+            <span class="kw">{appointment-location}</span>
+          </div>
+        </div>
+
+        <div class="kw-group">
+          <span class="kw-group-label">Salesperson</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{salesperson-name}</span>
+            <span class="kw">{salesperson-first-name}</span>
+            <span class="kw">{salesperson-phone}</span>
+            <span class="kw">{salesperson-email}</span>
+          </div>
+        </div>
+
+        <div class="kw-group">
+          <span class="kw-group-label">Project Manager</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{project-manager-name}</span>
+            <span class="kw">{project-manager-phone}</span>
+            <span class="kw">{project-manager-email}</span>
+          </div>
+        </div>
+
+        <div class="kw-group">
+          <span class="kw-group-label">Team</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{assigned-user}</span>
+          </div>
+        </div>
+
+        <div class="kw-group">
+          <span class="kw-group-label">Company</span>
+          <div class="kw-group-tokens">
+            <span class="kw">{company-name}</span>
+            <span class="kw">{company-phone}</span>
+            <span class="kw">{company-website}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Keyword resolution note -->
+      <div class="kw-note">
+        Keywords like <strong>{project-manager-name}</strong> will be replaced with actual data if available. If the data doesn't exist (e.g., no Project Manager assigned yet), the keyword will appear as written
+      </div>
+
+      <!-- Restore Default -->
+      <div class="restore-row">
+        <button class="btn-restore" onclick="resetContent()">Restore Default</button>
+      </div>
+
+      <!-- PDF Options -->
+      <div class="pdf-row">
+        <div class="pdf-label">PDF Options</div>
+        <div>
+          <a href="#" class="pdf-link" onclick="return false;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Customize My PDFs
+          </a>
+          <div class="pdf-sub">* Click this link to specify colors, columns, and other options when rendering your proposals and invoices</div>
+        </div>
+      </div>
+
+    </div><!-- /.settings-body -->
+
+    <div class="settings-footer">
+      <button class="btn-save" onclick="handleSave()">Save</button>
+      <button class="btn-cancel">Cancel - Return to Dashboard</button>
+    </div>
+
+  </div><!-- /.settings-card -->
+
+  <!-- ── Prototype legend ──────────────────────────────────── -->
+  <div class="proto-legend">
+    <strong>Prototype annotation:</strong>
+    <span><span class="kw">{salesperson-name}</span> — BR-1: keyword restored to this template</span>
+    <span><span class="legend-swatch s-invalid"></span> Unrecognized keyword — BR-4 warning (save not blocked)</span>
+    <span><span class="legend-swatch s-adjacent"></span> Adjacent token pair — BR-5 warning (save not blocked)</span>
+    <span>Counter updates in real-time; shifts to 70-char segments on any Unicode (emoji, smart quotes) — BR-3</span>
+  </div>
+
+</div><!-- /.page-wrapper -->
+
+<!-- Save toast -->
+<div class="save-toast" id="saveToast">✓ Template saved</div>
+
+<script>
+  // ── Valid keywords for Appointment Scheduled SMS ──────────────
+  // BR-1: {salesperson-name} added — previously missing from this template
+  var VALID_KEYWORDS = [
+    '{company-name}', '{company-phone}', '{company-website}',
+    '{first-name}', '{last-name}', '{event-type}',
+    '{appointment-time}', '{appointment-date}', '{appointment-location}',
+    '{assigned-user}', '{appointment-start-time}', '{appointment-end-time}',
+    '{project-manager-name}', '{project-manager-phone}', '{project-manager-email}',
+    '{salesperson-name}', '{salesperson-first-name}',
+    '{salesperson-phone}', '{salesperson-email}' // BR-1: Restored
+  ];
+
+  // Build a Set for fast lookup
+  var VALID_SET = {};
+  for (var i = 0; i < VALID_KEYWORDS.length; i++) {
+    VALID_SET[VALID_KEYWORDS[i]] = true;
+  }
+
+  // ── Initial template content ──────────────────────────────────
+  var INITIAL_CONTENT = [
+    'Hi, {first-name}! We\'ve scheduled your {event-type} for:',
+    '',
+    'Location:  {appointment-location}',
+    'Date:  {appointment-date}',
+    'Start Time:  {appointment-start-time}',
+    'End Time:  {appointment-end-time}',
+    '',
+    'Your salesperson: {salesperson-name}',
+    '',
+    'Questions? Call us at {company-phone}.'
+  ].join('\n');
+
+  // ── DOM refs ─────────────────────────────────────────────────
+  var textarea    = document.getElementById('editorTextarea');
+  var display     = document.getElementById('editorDisplay');
+  var counterText = document.getElementById('counterText');
+  var segPill     = document.getElementById('segPill');
+  var segDot      = document.getElementById('segDot');
+  var unicodeBadge = document.getElementById('unicodeBadge');
+  var valWarnings = document.getElementById('valWarnings');
+  var saveToast   = document.getElementById('saveToast');
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // Detect any non-GSM7 character (simplified: codepoint > 127 triggers Unicode mode)
+  function isUnicode(text) {
+    for (var i = 0; i < text.length; i++) {
+      if (text.charCodeAt(i) > 127) return true;
+    }
+    return false;
+  }
+
+  // ── Parse {token} occurrences from raw text ──────────────────
+  function parseTokens(text) {
+    var re = /\{[^{}\n]*\}/g;
+    var tokens = [];
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      tokens.push({
+        token: m[0],
+        index: m.index,
+        end: m.index + m[0].length
+      });
+    }
+    // Annotate validity and adjacency
+    for (var i = 0; i < tokens.length; i++) {
+      tokens[i].isValid = !!VALID_SET[tokens[i].token];
+      tokens[i].adjPrev = i > 0 && tokens[i - 1].end === tokens[i].index;
+      tokens[i].adjNext = i < tokens.length - 1 && tokens[i].end === tokens[i + 1].index;
+    }
+    return tokens;
+  }
+
+  // ── Build highlighted HTML from raw text ─────────────────────
+  function buildHTML(text) {
+    var tokens = parseTokens(text);
+    var html = '';
+    var cursor = 0;
+
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i];
+
+      // Plain text before this token
+      if (t.index > cursor) {
+        html += escapeHtml(text.slice(cursor, t.index));
+      }
+
+      // Determine warning class (adjacent takes priority)
+      var cls = '';
+      var title = '';
+      if (t.adjPrev || t.adjNext) {
+        cls = 'kw-adjacent';
+        title = 'BR-5: Adjacent keyword tokens — insert a space between } and { to prevent rendering issues';
+      } else if (!t.isValid) {
+        cls = 'kw-invalid';
+        title = 'BR-4: Unrecognized keyword — this token will not resolve at send time';
+      }
+
+      if (cls) {
+        html += '<span class="' + cls + '" title="' + title + '">' + escapeHtml(t.token) + '</span>';
+      } else {
+        html += escapeHtml(t.token);
+      }
+
+      cursor = t.end;
+    }
+
+    // Remaining text after last token
+    if (cursor < text.length) {
+      html += escapeHtml(text.slice(cursor));
+    }
+
+    // Convert newlines to <br>
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+  }
+
+  // ── Update BR-3 counter ──────────────────────────────────────
+  function updateCounter(text) {
+    var len = text.length;
+    var unicode = isUnicode(text);
+    var segSize = unicode ? 70 : 160; // per-segment boundary for segment count
+    var maxChars = 500;               // overall character limit
+    var segments = Math.max(1, Math.ceil(len / segSize));
+    var nearMax = len > maxChars * 0.8;
+    var overMax = len > maxChars;
+
+    counterText.textContent =
+      len + ' / ' + maxChars + ' characters\u00A0·\u00A0' +
+      segments + ' segment' + (segments > 1 ? 's' : '') + ' (estimated)';
+
+    // Dot + pill state
+    segDot.className = 'seg-dot';
+    if (overMax) {
+      segDot.classList.add('red');
+      segPill.classList.add('warn-seg');
+    } else if (nearMax || segments > 1) {
+      segDot.classList.add('amber');
+      segPill.classList.add('warn-seg');
+    } else {
+      segDot.classList.add('green');
+      segPill.classList.remove('warn-seg');
+    }
+
+    // Unicode badge
+    if (unicode) {
+      unicodeBadge.classList.add('visible');
+    } else {
+      unicodeBadge.classList.remove('visible');
+    }
+  }
+
+  // ── Update BR-4 / BR-5 warning panel ────────────────────────
+  function updateWarnings(text) {
+    var tokens = parseTokens(text);
+    var invalidList = [];
+    var adjPairs = [];
+
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i];
+      // Collect invalid (non-adjacent) tokens
+      if (!t.isValid && !t.adjPrev && !t.adjNext) {
+        invalidList.push(t.token);
+      }
+      // Collect adjacent pairs (record once per pair via adjNext)
+      if (t.adjNext) {
+        adjPairs.push(t.token + tokens[i + 1].token);
+      }
+    }
+
+    var html = '';
+
+    if (invalidList.length > 0) {
+      // Deduplicate
+      var seen = {};
+      var unique = [];
+      for (var j = 0; j < invalidList.length; j++) {
+        if (!seen[invalidList[j]]) { seen[invalidList[j]] = true; unique.push(invalidList[j]); }
+      }
+      var preview = unique.slice(0, 3).join(', ') + (unique.length > 3 ? '\u2026' : '');
+      html += '<div class="val-warn-item vw-invalid">' +
+        '<span class="wi">&#9888;</span>' +
+        '<span>' + invalidList.length + ' unrecognized keyword' + (invalidList.length > 1 ? 's' : '') +
+        ' detected (' + escapeHtml(preview) + ') \u2014 highlighted orange above. ' +
+        'These tokens will not resolve at send time. Saving is not blocked.</span>' +
+        '</div>';
+    }
+
+    if (adjPairs.length > 0) {
+      html += '<div class="val-warn-item vw-adjacent">' +
+        '<span class="wi">&#9888;</span>' +
+        '<span>' + adjPairs.length + ' adjacent keyword pair' + (adjPairs.length > 1 ? 's' : '') +
+        ' detected \u2014 highlighted red above. Insert a space or line break between tokens ' +
+        'to prevent rendering issues. Saving is not blocked.</span>' +
+        '</div>';
+    }
+
+    valWarnings.innerHTML = html;
+  }
+
+  // ── Main sync: textarea → display + counters ─────────────────
+  function syncHighlight() {
+    var text = textarea.value;
+    display.innerHTML = buildHTML(text);
+    display.scrollTop = textarea.scrollTop;
+    updateCounter(text);
+    updateWarnings(text);
+  }
+
+  // ── Event listeners ──────────────────────────────────────────
+  textarea.addEventListener('input', syncHighlight);
+  textarea.addEventListener('scroll', function () {
+    display.scrollTop = textarea.scrollTop;
+  });
+
+  // ── Demo helpers ─────────────────────────────────────────────
+  function demoInsert(text) {
+    var start = textarea.selectionStart;
+    var end = textarea.selectionEnd;
+    var val = textarea.value;
+    textarea.value = val.slice(0, start) + text + val.slice(end);
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus();
+    syncHighlight();
+  }
+
+  function resetContent() {
+    textarea.value = INITIAL_CONTENT;
+    textarea.focus();
+    syncHighlight();
+  }
+
+  // ── Save button ──────────────────────────────────────────────
+  var toastTimer;
+  function handleSave() {
+    saveToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      saveToast.classList.remove('show');
+    }, 2400);
+  }
+
+  // ── Init ─────────────────────────────────────────────────────
+  textarea.value = INITIAL_CONTENT;
+  syncHighlight();
+</script>
+
+</body>
+</html>
